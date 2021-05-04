@@ -4,14 +4,14 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-mode', type=str, help='rgb or flow')
+parser.add_argument('-mode', default='rgb', type=str, help='rgb or flow')
 parser.add_argument('-load_model', type=str)
 parser.add_argument('-root', type=str)
 parser.add_argument('-gpu', type=str)
 parser.add_argument('-save_dir', type=str)
 
 args = parser.parse_args()
-os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+os.environ["CUDA_VISIBLE_DEVICES"]='cuda:0'
 
 import torch
 import torch.nn as nn
@@ -31,8 +31,9 @@ from pytorch_i3d import InceptionI3d
 
 from charades_dataset_full import Charades as Dataset
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def run(max_steps=64e3, mode='rgb', root='/ssd2/charades/Charades_v1_rgb', split='charades/charades.json', batch_size=1, load_model='', save_dir=''):
+def run(max_steps=64e3, mode='rgb', root='rgb-frames/Test', split='charades/charades.json', batch_size=1, load_model='models/rgb_charades.pt', save_dir='i3d-features-ca/Test'):
     # setup dataset
     test_transforms = transforms.Compose([videotransforms.CenterCrop(224)])
 
@@ -53,7 +54,7 @@ def run(max_steps=64e3, mode='rgb', root='/ssd2/charades/Charades_v1_rgb', split
         i3d = InceptionI3d(400, in_channels=3)
     i3d.replace_logits(157)
     i3d.load_state_dict(torch.load(load_model))
-    i3d.cuda()
+    i3d.to(device=device)
 
     for phase in ['train', 'val']:
         i3d.train(False)  # Set model to evaluate mode
@@ -87,4 +88,4 @@ def run(max_steps=64e3, mode='rgb', root='/ssd2/charades/Charades_v1_rgb', split
 
 if __name__ == '__main__':
     # need to add argparse
-    run(mode=args.mode, root=args.root, load_model=args.load_model, save_dir=args.save_dir)
+    run()
